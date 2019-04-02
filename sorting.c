@@ -34,8 +34,11 @@ void print_array(int* array, int size);
 void randomize_array(int* array, int size, Stat *stat);
 void print_stat(int n, Stat *stat, FILE *f);
 void clear_stat(Stat *stat);
+void avg_stat(int n, Stat *stat, Stat *avgStat);
 
 int main(int argc, char **argv){
+
+    srand(time(NULL));
     FILE *f;
     int c;
     char *filename;
@@ -66,7 +69,7 @@ int main(int argc, char **argv){
                 break;
             
             case 'a':
-                asc_desc_flag = 1; //algorithms will sort 
+                asc_desc_flag = 1; 
                 break;
 
             case 'd':
@@ -112,55 +115,60 @@ int main(int argc, char **argv){
         scanf("%d", &k);
         int *array;
         int *arraycopy;
-        Stat stat = {0,0,0};
-        for(int i=0; i<k; i++){
-            for(int j=1; j<=100; j++){
-                int size = j * 100;
-                fprintf(f,"%d",size);
+        int counter = 0;
+        Stat *stat = malloc(5*sizeof(Stat));
+        Stat *avgStat = malloc(5*sizeof(Stat));
+        for(int j=1; j<=100; j++){
+            for(int l=0; l<5; l++){
+                clear_stat(&avgStat[l]);
+            }
+            int size = j * 100;
+            fprintf(f,"%d",size);
+            printf("%d\n", size);
+            for(int i=0; i<k; i++){
                 array = malloc(size*sizeof(int));
                 arraycopy = malloc(size*sizeof(int));
                 for(int h=0; h<size; h++){
                     array[h]=h+1;
+                    arraycopy[h]=h+1;
                 }
-                randomize_array(array,size,&stat);
-                stat.swaps = 0;
-                for(int i=0; i<size; i++){
-                    arraycopy[i]=array[i];
+                randomize_array(array,size,NULL);
+                for(int l=0; l<5; l++){
+                    clear_stat(&stat[l]);
                 }
-                quick_sort(arraycopy,0,size-1,&stat);
-                print_stat(size, &stat,f);
+                for(int l=0; l<size; l++){
+                    arraycopy[l]=array[l];
+                }
+                quick_sort(arraycopy,0,size-1,&stat[0]);
                 //print_stat(size, &stat,NULL);
-                clear_stat(&stat);
-                for(int i=0; i<size; i++){
-                    arraycopy[i]=array[i];
+                for(int l=0; l<size; l++){
+                    arraycopy[l]=array[l];
                 }
-                select_sort(arraycopy,size,&stat);
-                print_stat(size, &stat,f);
+                select_sort(arraycopy,size,&stat[1]);
                 //print_stat(size, &stat,NULL);
-                clear_stat(&stat);
-                for(int i=0; i<size; i++){
-                    arraycopy[i]=array[i];
+                for(int l=0; l<size; l++){
+                    arraycopy[l]=array[l];
                 }
-                insertion_sort(arraycopy,size,&stat);
-                print_stat(size, &stat,f);
-                //print_stat(size, &stat,NULL);
-                clear_stat(&stat);
-                for(int i=0; i<size; i++){
-                    arraycopy[i]=array[i];
+                insertion_sort(arraycopy,size,&stat[2]);
+                for(int l=0; l<size; l++){
+                    arraycopy[l]=array[l];
                 }
-                heap_sort(arraycopy,size,&stat);
-                print_stat(size, &stat,f);
-                //print_stat(size, &stat,NULL);
-                clear_stat(&stat);
-                for(int i=0; i<size; i++){
-                    arraycopy[i]=array[i];
+                heap_sort(arraycopy,size,&stat[3]);
+                for(int l=0; l<size; l++){
+                    arraycopy[l]=array[l];
                 }
-                mquick_sort(arraycopy,0,size-1,&stat);
-                print_stat(size, &stat,f);
-                //print_stat(size, &stat,NULL);
-                clear_stat(&stat);
-                fprintf(f,"\n");
+                mquick_sort(arraycopy,0,size-1,&stat[4]);
+                //fprintf(f,"\n");
+                for(int l=0; l<5; l++){
+                    avg_stat(i,&stat[l],&avgStat[l]);
+                }
+                free (array);
+                free (arraycopy);
             }
+            for(int l=0;l<5;l++){
+                print_stat(size,&avgStat[l],f);
+            }
+            fprintf(f,"\n");
         }
         fclose(f);
     } else if (type_flag != '0' && asc_desc_flag != -1){
@@ -251,7 +259,8 @@ void swap(int* a, int* b, Stat *stat){
     k = *a;
     *a = *b;
     *b = k;
-    stat->swaps+=2;
+    if (stat != NULL)
+        stat->swaps+=2;
 }
 
 void insertion_sort(int* array, int size, Stat *stat){
@@ -502,7 +511,6 @@ void print_array(int* array, int size){
 }
 
 void randomize_array(int* array, int size, Stat *stat){
-    srand(time(NULL));
     for (int i = 0; i < size; i++){
         int random = rand() % size;
         swap(&array[i],&array[random], stat);
@@ -516,9 +524,9 @@ void print_stat(int n, Stat *stat, FILE *f){
     if(f == NULL){
         printf("c: %d, s: %d, t: %f\n", c,s,t);
     } else {
-        int cn = c/n;
-        int sn = s/n;
-        fprintf(f,";%d;%d;%f;%d;%d",c,s,t,cn,sn);
+        float cn = (float) c/n;
+        float sn = (float) s/n;
+        fprintf(f,";%d;%d;%f;%f;%f",c,s,t,cn,sn);
     }
 }
 
@@ -526,4 +534,10 @@ void clear_stat(Stat *stat){
     stat->comparisons = 0;
     stat->swaps = 0;
     stat->t = 0;
+}
+
+void avg_stat(int n, Stat *stat, Stat *avgStat){
+    avgStat->comparisons = (avgStat->comparisons * n + stat->comparisons)/(n+1);
+    avgStat->swaps = (avgStat->swaps * n + stat->swaps)/(n+1);
+    avgStat->t = (avgStat->t * n + stat->t)/(n+1);
 }
